@@ -84,4 +84,11 @@ def recommend_books(
         description = row["description"]
         truncated_desc_split = description.split()
         truncated_description = "".join(truncated_desc_split[:30]) + "..."
-        
+
+        authors_split = row["authors"].split(";")
+        if len(authors_split) == 2:
+            authors_str = f"{authors_split[0]} and {authors_split[1]}"
+        elif len(authors_split) > 2:
+            authors_str = f"{', '.join(authors_split[:-1])}, and {authors_split[-1]}"
+        else:
+            authors_str = row["authors"]
