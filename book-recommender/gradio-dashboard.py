@@ -1,13 +1,25 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "dotenv>=0.9.9",
+#     "gradio>=6.8.0",
+#     "langchain-chroma>=1.1.0",
+#     "langchain-community>=0.4.1",
+#     "langchain-huggingface>=1.2.0",
+#     "langchain-openai>=1.1.10",
+#     "pandas>=3.0.1",
+#     "sentence-transformers>=5.2.3",
+# ]
+# ///
 import pandas as pd
 import numpy as np
+import re
 from dotenv import load_dotenv
 
-from langchain_community.document_loaders import TextLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import CharacterTextSplitter
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
 import gradio as gr
 
@@ -22,15 +34,8 @@ books["large_thumbnail"] = np.where(
     books["large_thumbnail"]
 )
 
-raw_documents = TextLoader("tagged_description.txt", encoding="utf-8").load()
-
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=800,      # Sweet spot for book descriptions
-    chunk_overlap=0,
-    separators=["\n\n", "\n", " "]  # Try double newline first
-)
-
-documents = text_splitter.split_documents(raw_documents)
+with open("tagged_description.txt", encoding="utf-8") as f:
+    documents = [Document(page_content=line.strip()) for line in f if line.strip()]
 
 embedding_model = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniLM-L6-v2")
 db_books = Chroma.from_documents(
@@ -48,7 +53,24 @@ def retrieve_semantic_recommendations(
 ) -> pd.DataFrame:
 
     recs = db_books.similarity_search_with_score(query, k = initial_top_k)
-    books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
+    isbn_pattern = re.compile(r"\b97[89]\d{10}\b")
+    books_list = []
+    for rec in recs:
+        doc = rec[0] if isinstance(rec, tuple) else rec
+        page_text = doc.page_content.strip('"')
+        first_token = page_text.split()[0] if page_text.split() else ""
+
+        if first_token.isdigit():
+            books_list.append(int(first_token))
+            continue
+
+        isbn_match = isbn_pattern.search(page_text)
+        if isbn_match:
+            books_list.append(int(isbn_match.group(0)))
+
+    if not books_list:
+        return books.head(0)
+
     book_recs = books[books["isbn13"].isin(books_list)].head(final_top_k)
 
 
@@ -100,7 +122,7 @@ def recommend_books(
 categories = ["All"] + sorted(books["simple_categories"].unique())
 tone = ["All"] + ["Happy", "Surprising", "Angry", "Suspenseful", "Sad"]
 
-with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
+with gr.Blocks() as dashboard:
     gr.Markdown("# Semantic Book Recommender")
 
     with gr.Row():
@@ -119,4 +141,4 @@ with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
                         )
 
 if __name__ == "__main__":
-    dashboard.launch( )
+    dashboard.launch(theme = gr.themes.Glass())
