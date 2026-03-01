@@ -38,3 +38,21 @@ db_books = Chroma.from_documents(
     embedding=embedding_model,
     collection_name="books_fixed"
 )
+
+def retrieve_semantic_recommendations(
+        query: str,
+        category: str = None,
+        tone: str = None,
+        initial_top_k: int = 50,
+        final_top_k: int = 16
+) -> pd.DataFrame:
+
+    recs = db_books.similarity_search_with_score(query, k = initial_top_k)
+    books_list = [int(rec.page_content.strip('"').split()[0]) for rec in recs]
+    book_recs = books[books["isbn13"].isin(books_list)].head(final_top_k)
+
+
+    if category != "All":
+        book_recs = book_recs[book_recs["simple_categories"] == category].head(final_top_k)
+    else:
+        book_recs = book_recs.head(final_top_k)
