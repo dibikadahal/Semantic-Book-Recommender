@@ -56,3 +56,15 @@ def retrieve_semantic_recommendations(
         book_recs = book_recs[book_recs["simple_categories"] == category].head(final_top_k)
     else:
         book_recs = book_recs.head(final_top_k)
+
+
+    if tone == "Happy":
+        book_recs.sort_values(by="joy", ascending=False, inplace=True)
+    elif tone == "Surprising":
+        book_recs.sort_values(by="surprise", ascending=False, inplace=True)
+    elif tone == "Angry":
+        book_recs.sort_values(by="anger", ascending=False, inplace=True)
+    elif tone == "Suspenseful":
+        book_recs.sort_values(by="fear", ascending=False, inplace=True)
+    elif tone == "Sad":
+        book_recs.sort_values(by="sadness", ascending=False, inplace=True)
