@@ -68,3 +68,20 @@ def retrieve_semantic_recommendations(
         book_recs.sort_values(by="fear", ascending=False, inplace=True)
     elif tone == "Sad":
         book_recs.sort_values(by="sadness", ascending=False, inplace=True)
+
+    return book_recs
+
+
+def recommend_books(
+        query: str,
+        category: str,
+        tone: str
+):
+    recommendations = retrieve_semantic_recommendations(query, category, tone)
+    results = []
+
+    for _, row in recommendations.iterrows():
+        description = row["description"]
+        truncated_desc_split = description.split()
+        truncated_description = "".join(truncated_desc_split[:30]) + "..."
+        
