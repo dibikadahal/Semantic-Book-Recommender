@@ -83,7 +83,7 @@ def recommend_books(
     for _, row in recommendations.iterrows():
         description = row["description"]
         truncated_desc_split = description.split()
-        truncated_description = "".join(truncated_desc_split[:30]) + "..."
+        truncated_description = " ".join(truncated_desc_split[:30]) + "..."
 
         authors_split = row["authors"].split(";")
         if len(authors_split) == 2:
@@ -92,3 +92,31 @@ def recommend_books(
             authors_str = f"{', '.join(authors_split[:-1])}, and {authors_split[-1]}"
         else:
             authors_str = row["authors"]
+
+        caption = f"{row['title']} by {authors_str}: {truncated_description}"
+        results.append((row["large_thumbnail"], caption))
+    return results
+
+categories = ["All"] + sorted(books["simple_categories"].unique())
+tone = ["All"] + ["Happy", "Surprising", "Angry", "Suspenseful", "Sad"]
+
+with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
+    gr.Markdown("# Semantic Book Recommender")
+
+    with gr.Row():
+        user_query = gr.Textbox(label = "Please enter a description of a book: ",
+                                placeholder = "e.g., A story about forgiveness")
+        category_dropdown = gr.Dropdown(choices = categories, label = "Select a category: ", value = "All")
+        tone_dropdown = gr.Dropdown(choices = tone, label = "Select an emotional tone: ", value = "All")
+        submit_button = gr.Button("Find recommendations")
+
+    gr.Markdown("## Recommendations")
+    output = gr.Gallery(label = "Recommended books", columns = 8, rows = 2)
+
+    submit_button.click(fn = recommend_books,
+                        inputs = [user_query, category_dropdown, tone_dropdown],
+                        outputs= output
+                        )
+
+if __name__ == "__main__":
+    dashboard.launch( )
